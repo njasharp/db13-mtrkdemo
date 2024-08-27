@@ -1,5 +1,5 @@
 import streamlit as st
-import plotly.graph_objects as go
+import plotly.express as px
 import pandas as pd
 from datetime import datetime
 
@@ -113,27 +113,10 @@ if st.session_state.tasks:
         "Delayed": "red"
     }
 
-    # Create Gantt chart with custom colors using plotly.graph_objects
-    fig = go.Figure()
-
-    for status, color in color_discrete_map.items():
-        df_status = df[df['Status'] == status]
-        fig.add_trace(go.Bar(
-            x=df_status['Finish'] - df_status['Start'],
-            y=df_status['Game Name'],
-            base=df_status['Start'],
-            orientation='h',
-            name=status,
-            marker=dict(color=color)
-        ))
-
-    fig.update_layout(
-        title='Project timelines',
-        xaxis_title='Time',
-        yaxis_title='Game Name',
-        barmode='stack',
-        yaxis={'categoryorder':'total ascending'},
-    )
+    # Create Gantt chart with custom colors
+    fig = px.timeline(df, x_start='Start', x_end='Finish', y='Game Name', color='Status', 
+                      title='Project timelines', color_discrete_map=color_discrete_map)
+    fig.update_yaxes(categoryorder="total ascending")  # Optional: Order tasks by start date
 
     # Main container
     with st.container():
@@ -154,26 +137,15 @@ if st.session_state.tasks:
 else:
     st.write("No tasks to display in the Gantt chart.")
 
-# Bar chart of task statuses using plotly.graph_objects
+# Bar chart of task statuses
 if st.session_state.tasks:
     status_counts = df['Status'].value_counts().reset_index()
     status_counts.columns = ['Status', 'Count']
 
-    fig_bar = go.Figure()
-
-    fig_bar.add_trace(go.Bar(
-        x=status_counts['Status'],
-        y=status_counts['Count'],
-        marker=dict(color=[color_discrete_map[status] for status in status_counts['Status']])
-    ))
-
-    fig_bar.update_layout(
-        title='Task Status Distribution',
-        xaxis_title='Status',
-        yaxis_title='Game Count'
-    )
-
-    st.plotly_chart(fig_bar)
+    # Apply the same custom color map to the bar chart and update the y-axis label
+    status_fig = px.bar(status_counts, x='Status', y='Count', title='Task Status Distribution', color='Status',
+                        color_discrete_map=color_discrete_map, labels={'Count': 'Game Count '})
+    st.plotly_chart(status_fig)
 
 st.write("save files, edit and load from sidebar ")
 st.info("build dw 8-27-24")
