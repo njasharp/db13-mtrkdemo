@@ -6,6 +6,14 @@ import seaborn as sns
 import matplotlib.dates as mdates
 from matplotlib.patches import Patch
 
+# Set page configuration without the 'theme' argument
+st.set_page_config(
+    page_title="Task Manager",
+    page_icon="✅",
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
+
 # Initialize session state to store tasks
 if 'tasks' not in st.session_state:
     st.session_state.tasks = []
@@ -243,7 +251,7 @@ if st.session_state.tasks:
         key="download_csv_button"
     )
 else:
-    st.write("No tasks to display in the Gantt chart.")
+    st.write("No tasks to display in the timeline chart.")
 
 # Bar chart of task statuses using Seaborn
 if st.session_state.tasks:
@@ -286,4 +294,4 @@ if st.session_state.tasks:
 
 # Final save and load buttons
 st.write("Save files, edit and load from sidebar")
-st.info("Built on 8-27-24")
+st.info("Built by dw  8-27-24")
