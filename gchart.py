@@ -1,7 +1,10 @@
 import streamlit as st
-import plotly.express as px
 import pandas as pd
 from datetime import datetime
+import matplotlib.pyplot as plt
+import seaborn as sns
+import matplotlib.dates as mdates
+from matplotlib.patches import Patch
 
 # Initialize session state to store tasks
 if 'tasks' not in st.session_state:
@@ -39,7 +42,14 @@ def update_task(index, game_name, company, start_date, end_date, status, notes):
 def load_tasks_from_csv(uploaded_file):
     df = pd.read_csv(uploaded_file)
     for _, row in df.iterrows():
-        add_task(row['Game Name'], row['Company'], pd.to_datetime(row['Start']), pd.to_datetime(row['Finish']), row['Status'], row['Notes'])
+        add_task(
+            row['Game Name'],
+            row['Company'],
+            pd.to_datetime(row['Start']),
+            pd.to_datetime(row['Finish']),
+            row['Status'],
+            row['Notes']
+        )
 
 # Sidebar for adding new tasks
 with st.sidebar:
@@ -49,7 +59,11 @@ with st.sidebar:
     company = st.text_input("Company", key="add_company")
     start_date = st.date_input("Start Date", min_value=datetime.now(), key="add_start_date")
     end_date = st.date_input("End Date", min_value=start_date, key="add_end_date")
-    status = st.selectbox("Status", ["Not Started", "In Progress", "Completed", "Hold", "Delayed"], key="add_status")
+    status = st.selectbox(
+        "Status",
+        ["Not Started", "In Progress", "Completed", "Hold", "Delayed"],
+        key="add_status"
+    )
     notes = st.text_area("Notes", key="add_notes")
 
     if st.button("Add Task", key="add_task_button"):
@@ -71,21 +85,64 @@ with st.sidebar:
     task_action = st.radio("Choose Action", ("None", "Edit Task", "Delete Task"), key="task_action")
 
     if task_action != "None" and st.session_state.tasks:
-        task_names = [f"{task['Game Name']} - {task['Start']} to {task['Finish']}" for task in st.session_state.tasks]
-        selected_task_index = st.selectbox("Select Task", range(len(task_names)), format_func=lambda x: task_names[x], key="select_task")
+        task_names = [
+            f"{task['Game Name']} - {task['Start'].strftime('%b %Y')} to {task['Finish'].strftime('%b %Y')}"
+            for task in st.session_state.tasks
+        ]
+        selected_task_index = st.selectbox(
+            "Select Task",
+            range(len(task_names)),
+            format_func=lambda x: task_names[x],
+            key="select_task"
+        )
         
         if task_action == "Edit Task":
             st.write("Editing Task:", task_names[selected_task_index])
             
-            edit_game_name = st.text_input("Game Name", value=st.session_state.tasks[selected_task_index]['Game Name'], key="edit_game_name")
-            edit_company = st.text_input("Company", value=st.session_state.tasks[selected_task_index]['Company'], key="edit_company")
-            edit_start_date = st.date_input("Start Date", value=st.session_state.tasks[selected_task_index]['Start'], key="edit_start_date")
-            edit_end_date = st.date_input("End Date", value=st.session_state.tasks[selected_task_index]['Finish'], key="edit_end_date")
-            edit_status = st.selectbox("Status", ["Not Started", "In Progress", "Completed", "Hold", "Delayed"], index=["Not Started", "In Progress", "Completed", "Hold", "Delayed"].index(st.session_state.tasks[selected_task_index]['Status']), key="edit_status")
-            edit_notes = st.text_area("Notes", value=st.session_state.tasks[selected_task_index]['Notes'], key="edit_notes")
+            edit_game_name = st.text_input(
+                "Game Name",
+                value=st.session_state.tasks[selected_task_index]['Game Name'],
+                key="edit_game_name"
+            )
+            edit_company = st.text_input(
+                "Company",
+                value=st.session_state.tasks[selected_task_index]['Company'],
+                key="edit_company"
+            )
+            edit_start_date = st.date_input(
+                "Start Date",
+                value=st.session_state.tasks[selected_task_index]['Start'],
+                key="edit_start_date"
+            )
+            edit_end_date = st.date_input(
+                "End Date",
+                value=st.session_state.tasks[selected_task_index]['Finish'],
+                key="edit_end_date"
+            )
+            edit_status = st.selectbox(
+                "Status",
+                ["Not Started", "In Progress", "Completed", "Hold", "Delayed"],
+                index=["Not Started", "In Progress", "Completed", "Hold", "Delayed"].index(
+                    st.session_state.tasks[selected_task_index]['Status']
+                ),
+                key="edit_status"
+            )
+            edit_notes = st.text_area(
+                "Notes",
+                value=st.session_state.tasks[selected_task_index]['Notes'],
+                key="edit_notes"
+            )
 
             if st.button("Update Task", key="update_task_button"):
-                update_task(selected_task_index, edit_game_name, edit_company, edit_start_date, edit_end_date, edit_status, edit_notes)
+                update_task(
+                    selected_task_index,
+                    edit_game_name,
+                    edit_company,
+                    edit_start_date,
+                    edit_end_date,
+                    edit_status,
+                    edit_notes
+                )
                 st.success("Task updated successfully!")
 
         elif task_action == "Delete Task":
@@ -113,39 +170,109 @@ if st.session_state.tasks:
         "Delayed": "red"
     }
 
-    # Create Gantt chart with custom colors
-    fig = px.timeline(df, x_start='Start', x_end='Finish', y='Game Name', color='Status', 
-                      title='Project timelines', color_discrete_map=color_discrete_map)
-    fig.update_yaxes(categoryorder="total ascending")  # Optional: Order tasks by start date
+    # Create Gantt chart with Matplotlib
+    fig, ax = plt.subplots(figsize=(12, 6), facecolor='black')  # Set figure background to dark
 
-    # Main container
-    with st.container():
-        st.header("Status tracker")
+    # Set axes background to dark
+    ax.set_facecolor('black')
 
-        # Display the Gantt chart
-        st.plotly_chart(fig)
-        
-        # Convert DataFrame to CSV
-        csv = df.to_csv(index=False)
-        st.sidebar.download_button(
-            label="Download CSV",
-            data=csv,
-            file_name='tasks.csv',
-            mime='text/csv',
-            key="download_csv_button"
+    # Plot each task as a horizontal bar
+    for i, task in df.iterrows():
+        ax.barh(
+            task['Game Name'],
+            (task['Finish'] - task['Start']).days,
+            left=task['Start'].to_pydatetime(),
+            color=color_discrete_map.get(task['Status'], 'gray'),
+            edgecolor='white'  # Optional: add edge color for better separation
         )
+
+    # Set labels and title with white color and clear font
+    ax.set_xlabel('Time', color='white', fontsize=14, fontweight='bold')
+    ax.set_ylabel('Game Name', color='white', fontsize=14, fontweight='bold')
+    ax.set_title('Project Timelines', color='white', fontsize=18, fontweight='bold')
+
+    # Format the x-axis to show month and year
+    ax.xaxis.set_major_formatter(mdates.DateFormatter('%b %Y'))
+    ax.xaxis.set_major_locator(mdates.MonthLocator(interval=1))  # Set the interval of the ticks
+
+    # Rotate x-axis labels for better readability and set color to white
+    plt.xticks(rotation=45, color='white')
+
+    # Set y-axis tick labels to white
+    plt.yticks(color='white', fontsize=12)
+
+    # Set x-axis tick labels to white
+    ax.tick_params(axis='x', colors='white', labelsize=12)
+    ax.tick_params(axis='y', colors='white', labelsize=12)
+
+    # Set the spine colors to white
+    for spine in ax.spines.values():
+        spine.set_color('white')
+
+    # Add gridlines (optional: customize as needed)
+    ax.grid(True, which='both', axis='x', color='gray', linestyle='--', linewidth=0.5)
+
+    # Add a legend with white font
+    legend_elements = [Patch(facecolor=color_discrete_map[status], edgecolor='white', label=status) for status in color_discrete_map]
+    ax.legend(handles=legend_elements, title="Status", title_fontsize='13', fontsize='12', loc='upper right', facecolor='black', edgecolor='white', labelcolor='white')
+
+    # Adjust layout for better spacing
+    plt.tight_layout()
+
+    # Display the Gantt chart
+    st.header("Status Tracker")
+    st.pyplot(fig)
+
+    # Convert DataFrame to CSV
+    csv = df.to_csv(index=False)
+    st.sidebar.download_button(
+        label="Download CSV",
+        data=csv,
+        file_name='tasks.csv',
+        mime='text/csv',
+        key="download_csv_button"
+    )
 else:
     st.write("No tasks to display in the Gantt chart.")
 
-# Bar chart of task statuses
+# Bar chart of task statuses using Seaborn
 if st.session_state.tasks:
     status_counts = df['Status'].value_counts().reset_index()
     status_counts.columns = ['Status', 'Count']
 
-    # Apply the same custom color map to the bar chart and update the y-axis label
-    status_fig = px.bar(status_counts, x='Status', y='Count', title='Task Status Distribution', color='Status',
-                        color_discrete_map=color_discrete_map, labels={'Count': 'Game Count '})
-    st.plotly_chart(status_fig)
+    fig, ax = plt.subplots(figsize=(10, 5), facecolor='black')  # Set figure background to dark
+    ax.set_facecolor('black')
 
-st.write("save files, edit and load from sidebar ")
-st.info("build dw 8-27-24")
+    sns.barplot(
+        x='Status',
+        y='Count',
+        data=status_counts,
+        palette=[color_discrete_map.get(status, 'gray') for status in status_counts['Status']],
+        ax=ax
+    )
+    
+    # Set labels and title with white color and clear font
+    ax.set_title('Task Status Distribution', color='white', fontsize=16, fontweight='bold')
+    ax.set_ylabel('Game Count', color='white', fontsize=14, fontweight='bold')
+    ax.set_xlabel('Status', color='white', fontsize=14, fontweight='bold')
+
+    # Set tick parameters for better readability
+    ax.tick_params(axis='x', colors='white', labelsize=12)
+    ax.tick_params(axis='y', colors='white', labelsize=12)
+
+    # Set the spine colors to white
+    for spine in ax.spines.values():
+        spine.set_color('white')
+
+    # Add a legend with white font
+    legend_elements = [Patch(facecolor=color_discrete_map[status], edgecolor='white', label=status) for status in color_discrete_map]
+    ax.legend(handles=legend_elements, title="Status", title_fontsize='13', fontsize='12', loc='upper right', facecolor='black', edgecolor='white', labelcolor='white')
+
+    # Adjust layout for better spacing
+    plt.tight_layout()
+
+    # Display the bar chart
+    st.pyplot(fig)
+
+st.write("Save files, edit and load from sidebar")
+st.info("Built on 8-27-24")
