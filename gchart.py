@@ -252,8 +252,7 @@ if st.session_state.tasks:
     )
 else:
     st.write("No tasks to display in the timeline chart.")
-
-# Bar chart of task statuses using Seaborn
+st.image("st.png")# Bar chart of task statuses using Seaborn
 if st.session_state.tasks:
     status_counts = df['Status'].value_counts().reset_index()
     status_counts.columns = ['Status', 'Count']
