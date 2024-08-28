@@ -13,6 +13,8 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="expanded"
 )
+st.text(" ")
+st.write("#")
 st.image("st.PNG", width=280)
 # Initialize session state to store tasks
 if 'tasks' not in st.session_state:

@@ -13,7 +13,9 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="expanded"
 )
-
+st.text(" ")
+st.write("#")
+st.image("st.PNG", width=280)
 # Initialize session state to store tasks
 if 'tasks' not in st.session_state:
     st.session_state.tasks = []
@@ -32,7 +34,9 @@ def add_task(game_name, company, start_date, end_date, status, notes):
 # Function to remove a task
 def remove_task(task_index):
     if 0 <= task_index < len(st.session_state.tasks):
-        st.session_state.tasks.pop(task_index)
+        if st.sidebar.button(f"Confirm Delete Task {task_index}"):
+            st.session_state.tasks.pop(task_index)
+            st.success(f"Task {task_index} deleted permanently!")
 
 # Function to update a task
 def update_task(index, game_name, company, start_date, end_date, status, notes):
@@ -61,7 +65,9 @@ def load_tasks_from_csv(uploaded_file):
 
 # Function to clear tasks from session state
 def clear_tasks():
-    st.session_state.tasks = []
+    if st.sidebar.button("Confirm Clear All Tasks"):
+        st.session_state.tasks = []
+        st.success("All tasks cleared permanently!")
 
 # Sidebar for adding new tasks
 with st.sidebar:
@@ -159,11 +165,9 @@ with st.sidebar:
 
         elif task_action == "Delete Task":
             st.write("Deleting Task:", task_names[selected_task_index])
-            if st.button("Delete Task", key="delete_task_button"):
-                remove_task(selected_task_index)
-                st.success("Task deleted successfully!")
-                # Clear the selection
-                selected_task_index = None
+            remove_task(selected_task_index)
+            # Clear the selection
+            selected_task_index = None
     elif not st.session_state.tasks:
         st.write("No tasks available to edit or delete.")
 
@@ -171,7 +175,6 @@ with st.sidebar:
 with st.sidebar:
     if st.button("Clear All Tasks"):
         clear_tasks()
-        st.success("All tasks cleared successfully!")
 
 # Create DataFrame for the Gantt chart
 if st.session_state.tasks:
@@ -238,7 +241,7 @@ if st.session_state.tasks:
     plt.tight_layout()
 
     # Display the Gantt chart
-    st.header("Status Tracker")
+    st.write("Progress Updates")
     st.pyplot(fig)
 
     # Convert DataFrame to CSV
@@ -252,6 +255,7 @@ if st.session_state.tasks:
     )
 else:
     st.write("No tasks to display in the timeline chart.")
+
 
 # Bar chart of task statuses using Seaborn
 if st.session_state.tasks:
